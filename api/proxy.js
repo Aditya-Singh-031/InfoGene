@@ -7,7 +7,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // If calling NCBI, inject API key from environment variables
     let finalUrl = targetUrl;
     if (finalUrl.includes("ncbi.nlm.nih.gov")) {
       const joinChar = finalUrl.includes("?") ? "&" : "?";
@@ -20,13 +19,13 @@ export default async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
 
-    // ✅ Properly forward JSON
+    // ✅ JSON responses
     if (contentType.includes("application/json")) {
       const json = await response.json();
       return res.status(response.status).json(json);
     }
 
-    // ✅ Otherwise forward as text / raw
+    // ✅ Non-JSON (PDB, CIF, text, etc.)
     const buffer = await response.arrayBuffer();
     res.setHeader("Content-Type", contentType || "text/plain");
     return res.status(response.status).send(Buffer.from(buffer));

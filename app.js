@@ -631,39 +631,39 @@ class GeneAnalysisPlatform {
     ----------------------------- */
 
     async fetchUniProtAccession(geneSymbol) {
-        // Try exact gene mapping for human (organism_id=9606). Falls back to generic gene: query.
         try {
+            // broader, more reliable query
             const q = encodeURIComponent(`(gene:${geneSymbol}) AND organism_id:9606 AND reviewed:true`);
-
-            const url = `https://rest.uniprot.org/uniprotkb/search?query=${q}&fields=accession,protein_name&format=json&size=1`;
-
-            const resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+            const url = `https://rest.uniprot.org/uniprotkb/search?query=${q}&fields=accession,uniProtkbId,protein_name&format=json&size=1`;
+    
+            let resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
             if (!resp.ok) return null;
-            const data = await resp.json();
+            let data = await resp.json();
+    
             if (data?.results && data.results.length > 0) {
-                // UniProt JSON format commonly uses primaryAccession
                 const item = data.results[0];
-                return item.primaryAccession || item.accession || (item.uniProtkbId ? item.uniProtkbId : null);
+                return item.primaryAccession || item.accession || item.uniProtkbId || null;
             }
-
-            // fallback: looser search
-            const fallbackQ = encodeURIComponent(`gene:${geneSymbol} AND organism_id:9606 AND reviewed:true`);
-            const fallbackUrl = `https://rest.uniprot.org/uniprotkb/search?query=${fallbackQ}&fields=accession,protein_name&format=json&size=1`;
-            const resp2 = await fetch(`/api/proxy?url=${encodeURIComponent(fallbackUrl)}`);
-
-            if (!resp2.ok) return null;
-            const data2 = await resp2.json();
-            if (data2?.results && data2.results.length > 0) {
-                const item2 = data2.results[0];
-                return item2.primaryAccession || item2.accession || null;
+    
+            // fallback: looser query
+            const fallbackQ = encodeURIComponent(`gene:${geneSymbol} AND organism_id:9606`);
+            const fallbackUrl = `https://rest.uniprot.org/uniprotkb/search?query=${fallbackQ}&fields=accession,uniProtkbId&format=json&size=1`;
+            resp = await fetch(`/api/proxy?url=${encodeURIComponent(fallbackUrl)}`);
+    
+            if (!resp.ok) return null;
+            data = await resp.json();
+            if (data?.results && data.results.length > 0) {
+                const item2 = data.results[0];
+                return item2.primaryAccession || item2.accession || item2.uniProtkbId || null;
             }
-
+    
             return null;
         } catch (err) {
             console.warn('UniProt lookup failed:', err);
             return null;
         }
     }
+    
 
     async fetchAlphaFoldModelInfo(uniprotAccession) {
         // Query AlphaFold API for metadata and file URLs

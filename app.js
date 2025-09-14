@@ -521,8 +521,8 @@ class GeneAnalysisPlatform {
         // Try exact gene mapping for human (organism_id=9606). Falls back to generic gene: query.
         try {
             const q = encodeURIComponent(`gene_exact:${geneSymbol} AND organism_id:9606 AND reviewed:true`);
-            const url = `https://rest.uniprot.org/uniprotkb/search?query=${q}&fields=accession,protein_name&format=json&size=1`;
-            const resp = await fetch(url);
+            const url = `https://rest.uniprot.org/uniprotkb/search?...`;
+            const resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
             if (!resp.ok) return null;
             const data = await resp.json();
             if (data?.results && data.results.length > 0) {
@@ -553,7 +553,7 @@ class GeneAnalysisPlatform {
         // Query AlphaFold API for metadata and file URLs
         try {
             const apiUrl = `https://alphafold.ebi.ac.uk/api/prediction/${encodeURIComponent(uniprotAccession)}`;
-            const resp = await fetch(apiUrl);
+            const resp = await fetch(`/api/proxy?url=${encodeURIComponent(apiUrl)}`);
             if (!resp.ok) {
                 // no model or server error
                 return null;

@@ -633,7 +633,8 @@ class GeneAnalysisPlatform {
     async fetchUniProtAccession(geneSymbol) {
         // Try exact gene mapping for human (organism_id=9606). Falls back to generic gene: query.
         try {
-            const q = encodeURIComponent(`gene_exact:${geneSymbol} AND organism_id:9606 AND reviewed:true`);
+            const q = encodeURIComponent(`(gene:${geneSymbol}) AND organism_id:9606 AND reviewed:true`);
+
             const url = `https://rest.uniprot.org/uniprotkb/search?query=${q}&fields=accession,protein_name&format=json&size=1`;
 
             const resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);

@@ -229,7 +229,7 @@ class GeneAnalysisPlatform {
         this.currentGene = this.findGeneData(geneValue);
         
         if (!this.currentGene) {
-            this.showError('Gene not found. Please try PROS1, BRCA1, or TP53 for demo purposes.');
+            this.showError('Gene not found. Please try PROS1, BRCA1, or TP53.');
             return;
         }
 

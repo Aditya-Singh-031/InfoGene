@@ -492,7 +492,6 @@ class GeneAnalysisPlatform {
             }
         }
     }
-    
 
     populateExonTable() {
         const exons = this.exons || (this.mockSequences[this.currentGene] && this.mockSequences[this.currentGene].exons);

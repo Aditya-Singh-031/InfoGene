@@ -3,231 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gene Analysis & Annotation Platform</title>
+    <title>InfoGene - Modern Gene Analysis Platform</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
+    <div class="container">
         <header class="header">
-            <div class="container">
-                <h1 class="header-title">Gene Analysis & Annotation Platform</h1>
-                <p class="header-subtitle">Professional bioinformatics tool for gene sequence analysis and annotation</p>
+            <div class="header-content">
+                <h1>InfoGene</h1>
+                <p class="subtitle">Modern Gene Analysis Platform</p>
             </div>
+            
         </header>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <div class="container">
-                <!-- Input Section -->
-                <section class="input-section card">
-                    <div class="card__body">
-                        <h2>Gene Analysis Input</h2>
-                        <form id="gene-form" class="gene-form">
-                            <div class="form-group">
-                                <label for="gene-input" class="form-label">Gene Symbol or NCBI Gene ID *</label>
-                                <input 
-                                    type="text" 
-                                    id="gene-input" 
-                                    class="form-control" 
-                                    placeholder="e.g., PROS1 or 5627"
-                                    required
-                                >
-                                <small class="form-help">Enter a gene symbol (PROS1, BRCA1, TP53) or NCBI Gene ID</small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="email-input" class="form-label">Email Address *</label>
-                                <input 
-                                    type="email" 
-                                    id="email-input" 
-                                    class="form-control" 
-                                    placeholder="your.email@example.com"
-                                    required
-                                >
-                                <small class="form-help">Required for NCBI API compliance</small>
-                            </div>
-                            
+            <!-- Input Form Section -->
+            <section class="input-section card">
+                <div class="card__body">
+                    <h2>Gene Analysis</h2>
+                    <p class="section-description">Enter any human gene symbol or NCBI Gene ID to get comprehensive analysis</p>
                     
-                            
-                            <div class="form-group">
-                                <button type="submit" class="btn btn--primary btn--lg btn--full-width" id="start-analysis">
-                                    <span class="btn-text">Start Analysis</span>
-                                    <span class="btn-loading hidden">
-                                        <span class="spinner"></span>
-                                        Analyzing...
-                                    </span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </section>
-
-                <!-- Progress Section -->
-                <section class="progress-section card hidden" id="progress-section">
-                    <div class="card__body">
-                        <h3>Analysis Progress</h3>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progress-fill"></div>
+                    <form id="geneForm" class="gene-form">
+                        <div class="form-group">
+                            <label for="geneInput" class="form-label">Gene Symbol or NCBI Gene ID *</label>
+                            <input type="text" id="geneInput" class="form-control" placeholder="e.g., BRCA2, TP53, APOE, or 675" required>
+                            <div class="input-hint">Supports any human gene symbol or NCBI Gene ID</div>
                         </div>
-                        <div class="progress-steps" id="progress-steps">
-                            <div class="progress-step active" data-step="0">
-                                <span class="step-icon">1</span>
-                                <span class="step-text">Initializing analysis...</span>
-                            </div>
+                        
+                        <div class="form-group">
+                            <label for="emailInput" class="form-label">Email Address *</label>
+                            <input type="email" id="emailInput" class="form-control" placeholder="your.email@example.com" required>
+                            <div class="input-hint">Required for NCBI API compliance</div>
                         </div>
-                    </div>
-                </section>
-
-                <!-- Results Section -->
-                <section class="results-section hidden" id="results-section">
-                    
-                    <!-- Gene Summary -->
-                    <div class="result-card card">
-                        <div class="card__header">
-                            <h3>Gene Summary</h3>
-                            <button class="collapse-btn" data-target="gene-summary">
-                                <span class="collapse-icon">−</span>
-                            </button>
-                        </div>
-                        <div class="card__body collapsible-content" id="gene-summary">
-                            <div class="gene-info" id="gene-info">
-                                <!-- Gene information will be populated here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Genomic Sequences -->
-                    <div class="result-card card">
-                        <div class="card__header">
-                            <h3>Genomic Sequences</h3>
-                            <button class="collapse-btn" data-target="genomic-sequences">
-                                <span class="collapse-icon">−</span>
-                            </button>
-                        </div>
-                        <div class="card__body collapsible-content" id="genomic-sequences">
-                            <div class="sequence-list" id="genomic-list">
-                                <!-- Genomic sequences will be populated here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- mRNA Sequences -->
-                    <div class="result-card card">
-                        <div class="card__header">
-                            <h3>mRNA Sequences</h3>
-                            <button class="collapse-btn" data-target="mrna-sequences">
-                                <span class="collapse-icon">−</span>
-                            </button>
-                        </div>
-                        <div class="card__body collapsible-content" id="mrna-sequences">
-                            <div class="sequence-list" id="mrna-list">
-                                <!-- mRNA sequences will be populated here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Exon Analysis -->
-                    <div class="result-card card">
-                        <div class="card__header">
-                            <h3>Exon Analysis</h3>
-                            <button class="collapse-btn" data-target="exon-analysis">
-                                <span class="collapse-icon">−</span>
-                            </button>
-                        </div>
-                        <div class="card__body collapsible-content" id="exon-analysis">
-                            <div class="exon-table-container">
-                                <table class="exon-table" id="exon-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Exon #</th>
-                                            <th>Ensembl ID</th>
-                                            <th>Start Position</th>
-                                            <th>End Position</th>
-                                            <th>Length (bp)</th>
-                                            <th>Strand</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="exon-table-body">
-                                        <!-- Exon data will be populated here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Downloads Section -->
-                    <div class="result-card card">
-                        <div class="card__header">
-                            <h3>File Downloads</h3>
-                            <button class="collapse-btn" data-target="file-downloads">
-                                <span class="collapse-icon">−</span>
-                            </button>
-                        </div>
-                        <div class="card__body collapsible-content" id="file-downloads">
-                            <div class="download-grid" id="download-grid">
-                                <!-- Download buttons will be populated here -->
-                            </div>
-                        </div>
-                    </div>
-                    <div class="result-card card">
-                        <div class="card__header">
-                        <h3>Protein Structure (AlphaFold)</h3>
-                        <button class="collapse-btn" data-target="protein-structure">
-                            <span class="collapse-icon">−</span>
+                        
+                        <button type="submit" class="btn btn--primary btn--lg btn--full-width">
+                            <span class="btn-text">Analyze Gene</span>
+                            <span class="btn-spinner hidden">
+                                <svg class="spinner" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                                        <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                                        <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                                    </circle>
+                                </svg>
+                            </span>
                         </button>
-                        </div>
-                        <div class="card__body collapsible-content" id="protein-structure">
-                        <div class="structure-meta" id="structure-meta" style="margin-bottom:12px;">
-                            <!-- filled dynamically: UniProt accession, protein name, confidence note -->
-                            <div><strong>UniProt:</strong> <span id="structure-uniprot">—</span></div>
-                            <div><strong>Protein:</strong> <span id="structure-protein-name">—</span></div>
-                            <div id="structure-note" style="font-size:12px;color:var(--color-text-secondary);">Structure loaded from AlphaFold DB (if available).</div>
-                        </div>
-                        <!-- NGL viewer container -->
-        <div id="ngl-viewer" style="width:100%; height:420px; border-radius:8px; border:1px solid var(--color-card-border);"></div>
-    
-        <div style="display:flex; gap:12px; margin-top:12px; flex-wrap:wrap;">
-            <button id="download-structure-btn" class="btn btn--primary">Download PDB</button>
-            <button id="view-on-alphafold-btn" class="btn btn--outline">Open on AlphaFold</button>
-            <div id="structure-error" style="color:var(--color-error); margin-left:8px;"></div>
-        </div>
-        </div>
-    </div>
-  
-                </section>
-                <!-- Protein Structure (AlphaFold) -->
-                <!-- Error Section -->
-                <section class="error-section card hidden" id="error-section">
-                    <div class="card__body">
-                        <div class="error-content">
-                            <h3 class="error-title">Analysis Error</h3>
-                            <div class="error-message" id="error-message">
-                                <!-- Error message will be populated here -->
+                    </form>
+                </div>
+            </section>
+
+            <!-- Progress Section -->
+            <section id="progressSection" class="progress-section hidden">
+                <div class="progress-container">
+                    <h3>Analysis Progress</h3>
+                    <div class="progress-steps">
+                        <div class="progress-step" id="step1">
+                            <div class="step-indicator"></div>
+                            <div class="step-content">
+                                <div class="step-title">Searching NCBI Gene database...</div>
+                                <div class="step-description">Validating gene symbol and retrieving basic information</div>
                             </div>
-                            <button class="btn btn--outline" id="retry-analysis">
-                                Retry Analysis
+                        </div>
+                        <div class="progress-step" id="step2">
+                            <div class="step-indicator"></div>
+                            <div class="step-content">
+                                <div class="step-title">Fetching genomic sequences...</div>
+                                <div class="step-description">Accessing RefSeq and genomic accession data</div>
+                            </div>
+                        </div>
+                        <div class="progress-step" id="step3">
+                            <div class="step-indicator"></div>
+                            <div class="step-content">
+                                <div class="step-title">Retrieving transcript data...</div>
+                                <div class="step-description">Processing mRNA transcript variants</div>
+                            </div>
+                        </div>
+                        <div class="progress-step" id="step4">
+                            <div class="step-indicator"></div>
+                            <div class="step-content">
+                                <div class="step-title">Processing exon structure...</div>
+                                <div class="step-description">Analyzing exon positions and genomic coordinates</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="results-section hidden">
+                <div class="results-header">
+                    <h2>Gene Analysis Results</h2>
+                    <div class="results-actions">
+                        <button id="newAnalysisBtn" class="btn btn--outline">New Analysis</button>
+                    </div>
+                </div>
+
+                <!-- Gene Summary -->
+                <div class="result-card card">
+                    <div class="card__header collapsible-header" data-target="geneSummary">
+                        <h3>Gene Summary</h3>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div id="geneSummary" class="card__body collapsible-content">
+                        <div class="gene-info-grid">
+                            <div class="info-item">
+                                <label>Gene Symbol:</label>
+                                <span id="geneSymbol">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>NCBI Gene ID:</label>
+                                <span id="geneId">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Chromosome:</label>
+                                <span id="chromosome">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Location:</label>
+                                <span id="location">-</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <label>Description:</label>
+                                <span id="description">-</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <label>Function:</label>
+                                <span id="function">-</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <label>Aliases:</label>
+                                <span id="aliases">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Genomic Sequences -->
+                <div class="result-card card">
+                    <div class="card__header collapsible-header" data-target="genomicSequences">
+                        <h3>Genomic Sequences</h3>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div id="genomicSequences" class="card__body collapsible-content collapsed">
+                        <div class="sequence-info">
+                            <div class="info-item">
+                                <label>RefSeq Genomic:</label>
+                                <span id="genomicAccession">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Chromosome Reference:</label>
+                                <span id="chromosomeRef">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- mRNA Transcripts -->
+                <div class="result-card card">
+                    <div class="card__header collapsible-header" data-target="mrnaTranscripts">
+                        <h3>mRNA Transcripts</h3>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div id="mrnaTranscripts" class="card__body collapsible-content collapsed">
+                        <div id="transcriptsList"></div>
+                    </div>
+                </div>
+
+                <!-- Exon Analysis -->
+                <div class="result-card card">
+                    <div class="card__header collapsible-header" data-target="exonAnalysis">
+                        <h3>Exon Analysis</h3>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div id="exonAnalysis" class="card__body collapsible-content collapsed">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Exon</th>
+                                        <th>Start Position</th>
+                                        <th>End Position</th>
+                                        <th>Length (bp)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="exonTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Downloads -->
+                <div class="result-card card">
+                    <div class="card__header collapsible-header" data-target="downloads">
+                        <h3>Downloads</h3>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div id="downloads" class="card__body collapsible-content collapsed">
+                        <div class="download-options">
+                            <button id="downloadFasta" class="btn btn--secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                                Download FASTA Sequences
+                            </button>
+                            <button id="downloadCsv" class="btn btn--secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                                Download CSV Data
                             </button>
                         </div>
                     </div>
-                </section>
-            </div>
+                </div>
+                <!-- Protein Structure (AlphaFold) - hidden by default -->
+                <div id="alphafold-card" class="result-card" style="display:none; margin-top:18px;">
+                    <div class="card-header">
+                    <h3>Protein Structure (AlphaFold)</h3>
+                    </div>
+                    <div class="card-body">
+                    <div style="margin-bottom:10px; font-size:14px;">
+                        <strong>UniProt:</strong> <span id="structure-uniprot">—</span><br/>
+                        <strong>Protein:</strong> <span id="structure-protein-name">—</span><br/>
+                        <small id="structure-note" style="color:#bdbdbd;">Structure fetched from AlphaFold DB (if available).</small>
+                    </div>
+                
+                    <!-- NGL viewer container -->
+                    <div id="ngl-viewer" style="width:100%; height:420px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); background:#0d0f10;"></div>
+                
+                    <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button id="download-structure-btn" class="btn" disabled>Download PDB</button>
+                        <button id="view-on-alphafold-btn" class="btn" disabled>Open on AlphaFold</button>
+                        <span id="structure-error" style="color:#e05a5a; margin-left:8px;"></span>
+                    </div>
+                    </div>
+                </div>
+            </section>
         </main>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="container">
-                <p>&copy; 2025 Gene Analysis Platform. Professional bioinformatics tools for research.</p>
-            </div>
-        </footer>
-    </div>
-
-    <!-- Notification Toast -->
-    <div class="toast hidden" id="toast">
-        <div class="toast-content">
-            <span class="toast-message" id="toast-message"></span>
-            <button class="toast-close" id="toast-close">&times;</button>
-        </div>
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
     </div>
     <script src="https://unpkg.com/ngl@0.10.4/dist/ngl.js"></script>
     <script src="app.js"></script>

@@ -637,8 +637,10 @@ class GeneAnalysisPlatform {
             const url = `https://rest.uniprot.org/uniprotkb/search?query=${q}&fields=accession,uniProtkbId,protein_name&format=json&size=1`;
     
             let resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
-            if (!resp.ok) return null;
-            let data = await resp.json();
+if (!resp.ok) return null;
+let data = await resp.json();
+console.log("UniProt response for", geneSymbol, data);
+
     
             if (data?.results && data.results.length > 0) {
                 const item = data.results[0];

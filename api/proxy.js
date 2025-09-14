@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // If calling NCBI, inject your API key from environment variables
+    // If calling NCBI, inject API key from environment variables
     let finalUrl = targetUrl;
     if (finalUrl.includes("ncbi.nlm.nih.gov")) {
       const joinChar = finalUrl.includes("?") ? "&" : "?";
@@ -15,27 +15,23 @@ export default async function handler(req, res) {
     }
 
     const response = await fetch(finalUrl);
+    const contentType = response.headers.get("content-type") || "";
 
-    // Forward upstream status code
-    res.status(response.status);
-
-    // Forward headers
-    const contentType = response.headers.get("content-type");
-    if (contentType) {
-      res.setHeader("Content-Type", contentType);
-    }
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
 
-    // Stream the body directly (works for JSON, text, PDB, CIF, etc.)
-    if (response.body) {
-      response.body.pipe(res);
-    } else {
-      const text = await response.text();
-      res.send(text);
+    // ✅ Properly forward JSON
+    if (contentType.includes("application/json")) {
+      const json = await response.json();
+      return res.status(response.status).json(json);
     }
+
+    // ✅ Otherwise forward as text / raw
+    const buffer = await response.arrayBuffer();
+    res.setHeader("Content-Type", contentType || "text/plain");
+    return res.status(response.status).send(Buffer.from(buffer));
   } catch (err) {
     console.error("Proxy error:", err);
-    res.status(500).json({ error: "Proxy failed", details: err.message });
+    return res.status(500).json({ error: "Proxy failed", details: err.message });
   }
 }

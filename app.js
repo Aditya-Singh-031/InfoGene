@@ -1,4 +1,4 @@
-// Gene Analysis Platform JavaScript
+ // Gene Analysis Platform JavaScript
 
 class GeneAnalysisPlatform {
     constructor() {
@@ -211,7 +211,7 @@ class GeneAnalysisPlatform {
 
     async startAnalysis() {
         if (this.isAnalyzing) return;
-
+    
         const geneInput = document.getElementById('gene-input');
         const emailInput = document.getElementById('email-input');
         
@@ -219,23 +219,35 @@ class GeneAnalysisPlatform {
             this.showError('Form elements not found');
             return;
         }
-
-        const geneValue = geneInput.value.trim().toUpperCase();
+    
+        const geneValue = geneInput.value.trim();
         const emailValue = emailInput.value.trim();
         
         if (!this.validateInputs(geneValue, emailValue)) return;
-
+    
         this.isAnalyzing = true;
-        this.currentGene = this.findGeneData(geneValue);
-        
-        if (!this.currentGene) {
-            this.showError('Gene not found. Please try PROS1, BRCA1, or TP53 for demo purposes.');
-            return;
-        }
-
+    
         try {
+            // Resolve gene (may use sampleGenes or NCBI lookups)
+            const found = await this.findGeneData(geneValue);
+            if (!found) {
+                this.showError('Gene not found. Please try PROS1, BRCA1, or TP53 for demo purposes or check the gene symbol/NCBI Gene ID.');
+                return;
+            }
+    
             this.showLoadingState();
             await this.runAnalysisSteps();
+    
+            // attempt to fetch Ensembl transcripts/exons (best-effort)
+            if (!this.sequences || !this.exons) {
+                // try Ensembl if not using mock
+                try {
+                    await this.tryFetchEnsemblAndSequences();
+                } catch (e) {
+                    console.warn('Ensembl fetch failed (continuing with available data)', e);
+                }
+            }
+    
             this.displayResults();
             this.showSuccessToast('Analysis completed successfully!');
         } catch (error) {
@@ -245,6 +257,7 @@ class GeneAnalysisPlatform {
             this.isAnalyzing = false;
         }
     }
+    
 
     validateInputs(geneInput, emailInput) {
         if (!geneInput) {
@@ -266,21 +279,41 @@ class GeneAnalysisPlatform {
         return true;
     }
 
-    findGeneData(input) {
-        // Check if input is a gene symbol
-        if (this.sampleGenes[input]) {
-            return input;
+    async findGeneData(input) {
+        const normalized = (input || '').trim().toUpperCase();
+        if (!normalized) return false;
+    
+        // 1) local demo
+        if (this.sampleGenes[normalized]) {
+            this.currentGene = normalized;
+            this.geneData = Object.assign({}, this.sampleGenes[normalized], { source: 'sample' });
+            this.sequences = this.mockSequences[normalized] || null;
+            this.exons = (this.mockSequences[normalized] && this.mockSequences[normalized].exons) || null;
+            return true;
         }
-        
-        // Check if input is a gene ID
-        for (const symbol in this.sampleGenes) {
-            if (this.sampleGenes[symbol].geneId === input) {
-                return symbol;
+    
+        // 2) numeric ID -> esummary
+        if (/^\d+$/.test(normalized)) {
+            const summary = await this.fetchNCBISummaryById(normalized);
+            if (summary) {
+                this.currentGene = (summary.symbol || normalized).toUpperCase();
+                this.geneData = Object.assign({}, summary, { source: 'ncbi' });
+                return true;
             }
+            return false;
         }
-        
-        return null;
-    }
+    
+        // 3) symbol -> esearch + esummary
+        const summaryBySymbol = await this.fetchNCBISummaryBySymbol(normalized);
+        if (summaryBySymbol) {
+            this.currentGene = (summaryBySymbol.symbol || normalized).toUpperCase();
+            this.geneData = Object.assign({}, summaryBySymbol, { source: 'ncbi' });
+            return true;
+        }
+    
+        // not found
+        return false;
+    }    
 
     showLoadingState() {
         // Hide other sections
@@ -367,100 +400,181 @@ class GeneAnalysisPlatform {
     }
 
     populateGeneInfo() {
-        const gene = this.sampleGenes[this.currentGene];
         const geneInfoDiv = document.getElementById('gene-info');
-        
-        if (!geneInfoDiv || !gene) return;
-        
+        if (!geneInfoDiv) return;
+    
+        const gene = this.geneData || (this.currentGene ? this.sampleGenes[this.currentGene] : null);
+        if (!gene) {
+            geneInfoDiv.innerHTML = `<div class="gene-detail">No gene metadata available.</div>`;
+            return;
+        }
+    
+        const symbol = gene.symbol || (this.currentGene || '—');
+        const geneId = gene.geneId || gene.id || '—';
+        const description = gene.description || gene.name || '—';
+        const organism = gene.organism || 'Homo sapiens';
+        const chromosome = gene.chromosome || (gene.maplocation ? gene.maplocation.split(':')[0] : '—');
+        const location = gene.location || gene.maplocation || '—';
+        const func = gene.function || gene.note || '—';
+        const aliases = gene.aliases ? gene.aliases.join(', ') : (gene.other_designations || '—');
+    
         geneInfoDiv.innerHTML = `
-            <div class="gene-detail">
-                <span class="gene-detail-label">Gene Symbol:</span>
-                <span class="gene-detail-value">${gene.symbol}</span>
-            </div>
-            <div class="gene-detail">
-                <span class="gene-detail-label">NCBI Gene ID:</span>
-                <span class="gene-detail-value">${gene.geneId}</span>
-            </div>
-            <div class="gene-detail">
-                <span class="gene-detail-label">Description:</span>
-                <span class="gene-detail-value">${gene.description}</span>
-            </div>
-            <div class="gene-detail">
-                <span class="gene-detail-label">Organism:</span>
-                <span class="gene-detail-value">${gene.organism}</span>
-            </div>
-            <div class="gene-detail">
-                <span class="gene-detail-label">Chromosome:</span>
-                <span class="gene-detail-value">${gene.chromosome}</span>
-            </div>
-            <div class="gene-detail">
-                <span class="gene-detail-label">Location:</span>
-                <span class="gene-detail-value">${gene.location}</span>
-            </div>
-            <div class="gene-detail">
-                <span class="gene-detail-label">Function:</span>
-                <span class="gene-detail-value">${gene.function}</span>
-            </div>
-            <div class="gene-detail">
-                <span class="gene-detail-label">Aliases:</span>
-                <span class="gene-detail-value">${gene.aliases.join(', ')}</span>
-            </div>
+            <div class="gene-detail"><span class="gene-detail-label">Gene Symbol:</span><span class="gene-detail-value">${symbol}</span></div>
+            <div class="gene-detail"><span class="gene-detail-label">NCBI Gene ID:</span><span class="gene-detail-value">${geneId}</span></div>
+            <div class="gene-detail"><span class="gene-detail-label">Description:</span><span class="gene-detail-value">${description}</span></div>
+            <div class="gene-detail"><span class="gene-detail-label">Organism:</span><span class="gene-detail-value">${organism}</span></div>
+            <div class="gene-detail"><span class="gene-detail-label">Chromosome:</span><span class="gene-detail-value">${chromosome}</span></div>
+            <div class="gene-detail"><span class="gene-detail-label">Location:</span><span class="gene-detail-value">${location}</span></div>
+            <div class="gene-detail"><span class="gene-detail-label">Function:</span><span class="gene-detail-value">${func}</span></div>
+            <div class="gene-detail"><span class="gene-detail-label">Aliases:</span><span class="gene-detail-value">${aliases}</span></div>
         `;
     }
+    
 
     populateSequences() {
-        const sequences = this.mockSequences[this.currentGene];
-        if (!sequences) return;
-        
-        // Populate genomic sequences
+        const sequences = this.sequences || this.mockSequences[this.currentGene];
+        if (!sequences) {
+            // clear UI if nothing
+            const genomicList = document.getElementById('genomic-list');
+            const mrnaList = document.getElementById('mrna-list');
+            if (genomicList) genomicList.innerHTML = '<div>No genomic data available.</div>';
+            if (mrnaList) mrnaList.innerHTML = '<div>No mRNA data available.</div>';
+            return;
+        }
+    
+        // Genomic (if available)
         const genomicList = document.getElementById('genomic-list');
         if (genomicList) {
-            genomicList.innerHTML = `
-                <div class="sequence-item">
-                    <div class="sequence-header">
-                        <span class="sequence-accession">${sequences.genomic.accession}</span>
-                        <span class="sequence-type">${sequences.genomic.type}</span>
+            if (sequences.genomic) {
+                genomicList.innerHTML = `
+                    <div class="sequence-item">
+                        <div class="sequence-header">
+                            <span class="sequence-accession">${sequences.genomic.accession}</span>
+                            <span class="sequence-type">${sequences.genomic.type || 'genomic'}</span>
+                        </div>
+                        <div class="sequence-description">Complete genomic sequence</div>
+                        <div class="sequence-length">${sequences.genomic.length ? sequences.genomic.length.toLocaleString() + ' bp' : '—'}</div>
                     </div>
-                    <div class="sequence-description">Complete genomic sequence</div>
-                    <div class="sequence-length">${sequences.genomic.length.toLocaleString()} bp</div>
-                </div>
-            `;
+                `;
+            } else {
+                genomicList.innerHTML = '<div>No genomic data available.</div>';
+            }
         }
-        
-        // Populate mRNA sequences
+    
+        // mRNA / transcripts
         const mrnaList = document.getElementById('mrna-list');
         if (mrnaList) {
-            mrnaList.innerHTML = sequences.mrna.map(seq => `
-                <div class="sequence-item">
-                    <div class="sequence-header">
-                        <span class="sequence-accession">${seq.accession}</span>
-                        <span class="sequence-type">mRNA</span>
+            if (Array.isArray(sequences.mrna) && sequences.mrna.length) {
+                mrnaList.innerHTML = sequences.mrna.map(seq => `
+                    <div class="sequence-item">
+                        <div class="sequence-header">
+                            <span class="sequence-accession">${seq.accession}</span>
+                            <span class="sequence-type">mRNA</span>
+                        </div>
+                        <div class="sequence-description">${seq.description || ''}</div>
+                        <div class="sequence-length">${seq.length ? seq.length.toLocaleString() + ' bp' : '—'}</div>
                     </div>
-                    <div class="sequence-description">${seq.description}</div>
-                    <div class="sequence-length">${seq.length.toLocaleString()} bp</div>
-                </div>
-            `).join('');
+                `).join('');
+            } else if (this.sequences && Array.isArray(this.sequences.transcripts) && this.sequences.transcripts.length) {
+                // Show Ensembl transcripts summary
+                mrnaList.innerHTML = this.sequences.transcripts.map(tx => `
+                    <div class="sequence-item">
+                        <div class="sequence-header">
+                            <span class="sequence-accession">${tx.transcript_id}</span>
+                            <span class="sequence-type">transcript</span>
+                        </div>
+                        <div class="sequence-description">coords: ${tx.start || '?'} - ${tx.end || '?'}, strand ${tx.strand || '?'}</div>
+                        <div class="sequence-length">${(tx.end && tx.start) ? (Math.abs(tx.end - tx.start) + 1).toLocaleString() + ' bp' : '—'}</div>
+                    </div>
+                `).join('');
+            } else {
+                mrnaList.innerHTML = '<div>No mRNA/transcript data available.</div>';
+            }
         }
     }
+    
 
     populateExonTable() {
-        const sequences = this.mockSequences[this.currentGene];
+        const exons = this.exons || (this.mockSequences[this.currentGene] && this.mockSequences[this.currentGene].exons);
         const tableBody = document.getElementById('exon-table-body');
         
-        if (!sequences || !tableBody) return;
-        
-        tableBody.innerHTML = sequences.exons.map(exon => `
+        if (!tableBody) return;
+        if (!exons || !exons.length) {
+            tableBody.innerHTML = '<tr><td colspan="6">No exon data available.</td></tr>';
+            return;
+        }
+    
+        tableBody.innerHTML = exons.map(exon => `
             <tr>
-                <td>${exon.number}</td>
-                <td><code>${exon.id}</code></td>
-                <td>${exon.start.toLocaleString()}</td>
-                <td>${exon.end.toLocaleString()}</td>
-                <td>${exon.length}</td>
-                <td>${exon.strand}</td>
+                <td>${exon.number || '—'}</td>
+                <td><code>${exon.id || '—'}</code></td>
+                <td>${exon.start ? exon.start.toLocaleString() : '—'}</td>
+                <td>${exon.end ? exon.end.toLocaleString() : '—'}</td>
+                <td>${exon.length || (exon.start && exon.end ? Math.abs(exon.end - exon.start) + 1 : '—')}</td>
+                <td>${exon.strand || '—'}</td>
             </tr>
         `).join('');
     }
-
+    
+    async tryFetchEnsemblAndSequences() {
+        if (!this.currentGene) return;
+        try {
+            const symbol = this.currentGene;
+            const ensemblUrl = `https://rest.ensembl.org/lookup/symbol/homo_sapiens/${encodeURIComponent(symbol)}?expand=1`;
+            const resp = await fetch(`/api/proxy?url=${encodeURIComponent(ensemblUrl)}`);
+            if (!resp.ok) return;
+    
+            const data = await resp.json();
+            const transcripts = [];
+            const exonList = [];
+    
+            if (Array.isArray(data.Transcript) && data.Transcript.length) {
+                data.Transcript.forEach((tx, txIndex) => {
+                    const txObj = {
+                        transcript_id: tx.id || `tx_${txIndex+1}`,
+                        start: tx.start,
+                        end: tx.end,
+                        strand: tx.strand === 1 ? '+' : '-',
+                        exons: []
+                    };
+                    if (Array.isArray(tx.Exon)) {
+                        tx.Exon.forEach((ex, exIndex) => {
+                            const e = {
+                                number: exIndex + 1,
+                                id: ex.id || `ex_${exIndex+1}`,
+                                start: ex.start,
+                                end: ex.end,
+                                length: Math.abs(ex.end - ex.start) + 1,
+                                strand: txObj.strand
+                            };
+                            txObj.exons.push(e);
+                            exonList.push(e);
+                        });
+                    }
+                    transcripts.push(txObj);
+                });
+            } else if (Array.isArray(data.exon)) {
+                data.exon.forEach((ex, idx) => {
+                    exonList.push({
+                        number: idx + 1,
+                        id: ex.id || `ex_${idx+1}`,
+                        start: ex.start,
+                        end: ex.end,
+                        length: Math.abs(ex.end - ex.start) + 1,
+                        strand: ex.strand === 1 ? '+' : '-'
+                    });
+                });
+            }
+    
+            if (transcripts.length) {
+                this.sequences = { transcripts };
+                this.exons = exonList.length ? exonList : null;
+            }
+        } catch (err) {
+            console.warn('Ensembl fetch error', err);
+        }
+    }
+    
     setupDownloads() {
         const downloadGrid = document.getElementById('download-grid');
         if (!downloadGrid) return;
@@ -521,7 +635,8 @@ class GeneAnalysisPlatform {
         // Try exact gene mapping for human (organism_id=9606). Falls back to generic gene: query.
         try {
             const q = encodeURIComponent(`gene_exact:${geneSymbol} AND organism_id:9606 AND reviewed:true`);
-            const url = `https://rest.uniprot.org/uniprotkb/search?...`;
+            const url = `https://rest.uniprot.org/uniprotkb/search?query=${q}&fields=accession,protein_name&format=json&size=1`;
+
             const resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
             if (!resp.ok) return null;
             const data = await resp.json();
@@ -534,7 +649,8 @@ class GeneAnalysisPlatform {
             // fallback: looser search
             const fallbackQ = encodeURIComponent(`gene:${geneSymbol} AND organism_id:9606 AND reviewed:true`);
             const fallbackUrl = `https://rest.uniprot.org/uniprotkb/search?query=${fallbackQ}&fields=accession,protein_name&format=json&size=1`;
-            const resp2 = await fetch(fallbackUrl);
+            const resp2 = await fetch(`/api/proxy?url=${encodeURIComponent(fallbackUrl)}`);
+
             if (!resp2.ok) return null;
             const data2 = await resp2.json();
             if (data2?.results && data2.results.length > 0) {
@@ -625,7 +741,8 @@ class GeneAnalysisPlatform {
             // try to pull from UniProt response via another quick query to show protein name
             try {
                 const upUrl = `https://rest.uniprot.org/uniprotkb/${encodeURIComponent(accession)}?format=json`;
-                const resp = await fetch(upUrl);
+                const resp = await fetch(`/api/proxy?url=${encodeURIComponent(upUrl)}`);
+
                 if (resp.ok) {
                     const upObj = await resp.json();
                     const pName = upObj?.proteinDescription?.recommendedName?.fullName?.value
@@ -725,7 +842,8 @@ if (!pdbUrl) {
 
     async downloadStructureFile(url, filename) {
         try {
-            const resp = await fetch(url);
+            const resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+
             if (!resp.ok) throw new Error('Download failed');
             const blob = await resp.blob();
             const a = document.createElement('a');
@@ -855,6 +973,57 @@ Analysis completed successfully.`;
         if (btnLoading) btnLoading.classList.add('hidden');
         if (btn) btn.disabled = false;
     }
+    // Fetches esummary by NCBI Gene ID via proxy
+async fetchNCBISummaryById(geneId) {
+    try {
+        const apiUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gene&id=${encodeURIComponent(geneId)}&retmode=json`;
+        const resp = await fetch(`/api/proxy?url=${encodeURIComponent(apiUrl)}`);
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        const doc = data?.result?.[geneId];
+        if (!doc) return null;
+        return {
+            geneId: geneId,
+            symbol: doc.name || doc.nomenclature_symbol || null,
+            name: doc.description || doc.nomenclature_name || null,
+            description: doc.description || null,
+            chromosome: doc.chromosome || null,
+            location: doc.maplocation || null,
+            organism: doc.organism?.scientificname || null
+        };
+    } catch (err) {
+        console.warn('fetchNCBISummaryById failed', err);
+        return null;
+    }
+}
+
+// Searches NCBI Gene by symbol -> returns esummary object or null
+async fetchNCBISummaryBySymbol(symbol) {
+    try {
+        // try symbol scoped to human first
+        const esearchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gene&term=${encodeURIComponent(symbol + '[Gene Name] AND Homo sapiens[Organism]')}&retmode=json`;
+        let resp = await fetch(`/api/proxy?url=${encodeURIComponent(esearchUrl)}`);
+        if (!resp.ok) return null;
+        let data = await resp.json();
+        let ids = data?.esearchresult?.idlist || [];
+
+        // looser search if none found
+        if (!ids.length) {
+            const looseUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gene&term=${encodeURIComponent(symbol)}&retmode=json`;
+            resp = await fetch(`/api/proxy?url=${encodeURIComponent(looseUrl)}`);
+            if (!resp.ok) return null;
+            data = await resp.json();
+            ids = data?.esearchresult?.idlist || [];
+        }
+
+        if (!ids.length) return null;
+        const geneId = ids[0];
+        return await this.fetchNCBISummaryById(geneId);
+    } catch (err) {
+        console.warn('fetchNCBISummaryBySymbol failed', err);
+        return null;
+    }
+}
 
     showError(message) {
         this.hideLoadingState();

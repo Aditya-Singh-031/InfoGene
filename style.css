@@ -1313,3 +1313,6 @@ select.form-control {
     opacity: 0.5;
   }
 }
+
+/* ensure viewer gets a clean contained look */
+#ngl-viewer { border-radius: 8px; background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); }

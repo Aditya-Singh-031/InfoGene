@@ -5,6 +5,7 @@ class GeneAnalysisPlatform {
         this.currentGene = null;
         this.isAnalyzing = false;
         this.progressStep = 0;
+        this.nglStage = null;
         this.searchStrategies = [
             "Initializing analysis...",
             "Searching for RefSeqGene sequences (NG_)...",
@@ -354,7 +355,7 @@ class GeneAnalysisPlatform {
         this.populateSequences();
         this.populateExonTable();
         this.setupDownloads();
-        
+        this.loadProteinStructure();
         // Ensure collapsible sections have proper max-height
         setTimeout(() => {
             document.querySelectorAll('.collapsible-content').forEach(content => {
@@ -511,6 +512,237 @@ class GeneAnalysisPlatform {
                 </button>
             </div>
         `).join('');
+    }
+        /* -----------------------------
+    AlphaFold integration helpers
+    ----------------------------- */
+
+    async fetchUniProtAccession(geneSymbol) {
+        // Try exact gene mapping for human (organism_id=9606). Falls back to generic gene: query.
+        try {
+            const q = encodeURIComponent(`gene_exact:${geneSymbol} AND organism_id:9606 AND reviewed:true`);
+            const url = `https://rest.uniprot.org/uniprotkb/search?query=${q}&fields=accession,protein_name&format=json&size=1`;
+            const resp = await fetch(url);
+            if (!resp.ok) return null;
+            const data = await resp.json();
+            if (data?.results && data.results.length > 0) {
+                // UniProt JSON format commonly uses primaryAccession
+                const item = data.results[0];
+                return item.primaryAccession || item.accession || (item.uniProtkbId ? item.uniProtkbId : null);
+            }
+
+            // fallback: looser search
+            const fallbackQ = encodeURIComponent(`gene:${geneSymbol} AND organism_id:9606 AND reviewed:true`);
+            const fallbackUrl = `https://rest.uniprot.org/uniprotkb/search?query=${fallbackQ}&fields=accession,protein_name&format=json&size=1`;
+            const resp2 = await fetch(fallbackUrl);
+            if (!resp2.ok) return null;
+            const data2 = await resp2.json();
+            if (data2?.results && data2.results.length > 0) {
+                const item2 = data2.results[0];
+                return item2.primaryAccession || item2.accession || null;
+            }
+
+            return null;
+        } catch (err) {
+            console.warn('UniProt lookup failed:', err);
+            return null;
+        }
+    }
+
+    async fetchAlphaFoldModelInfo(uniprotAccession) {
+        // Query AlphaFold API for metadata and file URLs
+        try {
+            const apiUrl = `https://alphafold.ebi.ac.uk/api/prediction/${encodeURIComponent(uniprotAccession)}`;
+            const resp = await fetch(apiUrl);
+            if (!resp.ok) {
+                // no model or server error
+                return null;
+            }
+            const info = await resp.json();
+            // API historically returns an array or object describing model(s). Inspect common fields:
+            // look for an array of "models" or direct fields containing pdb/mmcif URLs.
+            if (Array.isArray(info) && info.length > 0) {
+                console.log('AlphaFold API returned array for accession', uniprotAccession, info);
+                return info[0];
+            }
+            if (info && typeof info === 'object') {
+                console.log('AlphaFold API returned object for accession', uniprotAccession, info);
+                return info;
+            }
+            
+            return null;
+        } catch (err) {
+            console.warn('AlphaFold API fetch failed:', err);
+            return null;
+        }
+    }
+
+    async loadProteinStructure() {
+        // Attempts to map gene -> UniProt -> AlphaFold model -> show in NGL viewer
+        const gene = this.sampleGenes[this.currentGene];
+        const geneSymbol = gene?.symbol || (document.getElementById('gene-input')?.value || '').toUpperCase();
+        const uniprotEl = document.getElementById('structure-uniprot');
+        const proteinNameEl = document.getElementById('structure-protein-name');
+        const noteEl = document.getElementById('structure-note');
+        const errorEl = document.getElementById('structure-error');
+        const downloadBtn = document.getElementById('download-structure-btn');
+        const viewOnAFBtn = document.getElementById('view-on-alphafold-btn');
+
+        // clear previous
+        if (uniprotEl) uniprotEl.textContent = '—';
+        if (proteinNameEl) proteinNameEl.textContent = '—';
+        if (errorEl) errorEl.textContent = '';
+        if (downloadBtn) downloadBtn.disabled = true;
+        if (viewOnAFBtn) viewOnAFBtn.disabled = true;
+
+        if (!geneSymbol) {
+            if (noteEl) noteEl.textContent = 'No gene symbol available to fetch structure.';
+            return;
+        }
+
+        // 1) find UniProt accession
+        const accession = await this.fetchUniProtAccession(geneSymbol);
+        if (!accession) {
+            if (noteEl) noteEl.textContent = 'No UniProt accession found for this gene (or not in UniProt).';
+            if (errorEl) errorEl.textContent = 'Structure not available.';
+            return;
+        }
+
+        if (uniprotEl) uniprotEl.textContent = accession;
+
+        // 2) fetch AlphaFold model info
+        const afInfo = await this.fetchAlphaFoldModelInfo(accession);
+        if (!afInfo) {
+            if (noteEl) noteEl.textContent = 'No AlphaFold model found for this UniProt accession.';
+            if (errorEl) errorEl.textContent = 'Structure not available.';
+            return;
+        }
+
+        // fill protein name (if available)
+        if (afInfo?.name) {
+            if (proteinNameEl) proteinNameEl.textContent = afInfo.name;
+        } else {
+            // try to pull from UniProt response via another quick query to show protein name
+            try {
+                const upUrl = `https://rest.uniprot.org/uniprotkb/${encodeURIComponent(accession)}?format=json`;
+                const resp = await fetch(upUrl);
+                if (resp.ok) {
+                    const upObj = await resp.json();
+                    const pName = upObj?.proteinDescription?.recommendedName?.fullName?.value
+                                || (upObj?.proteinDescription?.submissionNames?.[0]?.value)
+                                || upObj?.uniProtkbId
+                                || null;
+                    if (pName && proteinNameEl) proteinNameEl.textContent = pName;
+                }
+            } catch (e) { /* non-critical */ }
+        }
+
+        // ---- REPLACE existing pdbUrl determination block with this ----
+
+let pdbUrl = null;
+
+// 1. direct fields
+if (afInfo.pdbUrl) {
+    pdbUrl = afInfo.pdbUrl;
+} else if (afInfo.cifUrl) {
+    pdbUrl = afInfo.cifUrl;
+} else if (afInfo.model?.pdbUrl) {
+    pdbUrl = afInfo.model.pdbUrl;
+} else if (afInfo.model?.structure_url) {
+    pdbUrl = afInfo.model.structure_url;
+} else if (afInfo.structure_url) {
+    pdbUrl = afInfo.structure_url;
+}
+
+// 2. files array
+if (!pdbUrl && Array.isArray(afInfo.files)) {
+    const fileEntry = afInfo.files.find(f => {
+        const nameOk = f.name && (f.name.endsWith('.pdb') || f.name.endsWith('.cif'));
+        const urlOk = f.url && (f.url.endsWith('.pdb') || f.url.endsWith('.cif'));
+        return nameOk || urlOk;
+    });
+    if (fileEntry) {
+        pdbUrl = fileEntry.url || (fileEntry.name && (fileEntry.name.endsWith('.pdb') || fileEntry.name.endsWith('.cif')) ? `${fileEntry.name}` : null);
+    }
+}
+
+// 3. fallback via known pattern
+if (!pdbUrl) {
+    // Try known pattern for AlphaFold DB
+    const possible = `https://alphafold.ebi.ac.uk/files/AF-${accession}-F1-model_v1.pdb`;
+    // Optionally try head request to see if exists, or just use it
+    pdbUrl = possible;
+}
+
+
+        // 4) if we have a pdbUrl, load into NGL viewer
+        if (!pdbUrl) {
+            if (noteEl) noteEl.textContent = 'AlphaFold model entry found but no downloadable coordinate file URL detected.';
+            if (errorEl) errorEl.textContent = 'Structure file not found.';
+            return;
+        }
+
+        // enable buttons
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            downloadBtn.onclick = () => this.downloadStructureFile(pdbUrl, `${accession}_AF_model.pdb`);
+        }
+        if (viewOnAFBtn) {
+            viewOnAFBtn.disabled = false;
+            viewOnAFBtn.onclick = () => window.open(`https://alphafold.ebi.ac.uk/entry/${accession}`, '_blank');
+        }
+
+        // Initialize NGL viewer if needed
+        try {
+            if (!this.nglStage) {
+                // 'ngl-viewer' is the id of the viewer div in index.html
+                this.nglStage = new NGL.Stage('ngl-viewer');
+                // handle resize
+                window.addEventListener('resize', () => { try { this.nglStage.handleResize(); } catch (e) {} });
+            } else {
+                // remove existing components
+                this.nglStage.removeAllComponents();
+            }
+
+            // load the structure
+            this.nglStage.loadFile(pdbUrl).then(component => {
+                try {
+                    component.addRepresentation('cartoon', { smoothTube: true });
+                    component.addRepresentation('ball+stick', { sele: 'hetero' }); // show ligands if any
+                    component.autoView();
+                } catch (e) {
+                    console.warn('NGL representation error:', e);
+                }
+            }).catch(err => {
+                console.warn('NGL load error:', err);
+                if (errorEl) errorEl.textContent = 'Failed to load structure in viewer.';
+            });
+        } catch (err) {
+            console.warn('Viewer initialization failed:', err);
+            if (errorEl) errorEl.textContent = 'Viewer failed to initialize.';
+        }
+    }
+
+    async downloadStructureFile(url, filename) {
+        try {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('Download failed');
+            const blob = await resp.blob();
+            const a = document.createElement('a');
+            const objectUrl = URL.createObjectURL(blob);
+            a.href = objectUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(objectUrl);
+            this.showSuccessToast(`Downloaded ${filename}`);
+        } catch (err) {
+            console.error('Structure download failed', err);
+            const errEl = document.getElementById('structure-error');
+            if (errEl) errEl.textContent = 'Download failed.';
+            this.showErrorToast('Structure download failed.');
+        }
     }
 
     downloadFile(filename, type) {

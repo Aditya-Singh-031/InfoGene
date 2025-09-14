@@ -1,4 +1,4 @@
- // Gene Analysis Platform JavaScript
+// Gene Analysis Platform JavaScript
 
 class GeneAnalysisPlatform {
     constructor() {
@@ -576,10 +576,21 @@ class GeneAnalysisPlatform {
     
     setupDownloads() {
         const downloadGrid = document.getElementById('download-grid');
-        if (!downloadGrid) return;
-
+        const downloadsCard = downloadGrid ? downloadGrid.closest('.card') : null;
+    
+        if (!downloadGrid || !downloadsCard) return;
+    
         const gene = this.sampleGenes[this.currentGene];
         const sequences = this.mockSequences[this.currentGene];
+        
+        // If the gene is not one of our mock samples, hide the downloads section.
+        if (!gene || !sequences || !sequences.genomic || !sequences.mrna) {
+            downloadsCard.classList.add('hidden');
+            return;
+        }
+    
+        // Otherwise, ensure the section is visible and populate it.
+        downloadsCard.classList.remove('hidden');
         
         const downloads = [
             {
@@ -866,6 +877,11 @@ if (!pdbUrl) {
     }
 
     downloadFile(filename, type) {
+        if (!this.sampleGenes[this.currentGene] || !this.mockSequences[this.currentGene]) {
+            this.showErrorToast("Downloads are only available for demo genes.");
+            return;
+        }
+        
         let content = '';
         
         switch (type) {
@@ -902,9 +918,11 @@ if (!pdbUrl) {
         const gene = this.sampleGenes[this.currentGene];
         const sequences = this.mockSequences[this.currentGene];
         
+        if (!gene || !sequences || !sequences.genomic) return ">Error: Genomic data not available.";
+
         return `>${sequences.genomic.accession} ${gene.description} genomic sequence
 ATGCGTACGTAGCTACGATCGATCGATCGATCGATCGATCGATCGTAGCTAGCTAG
-CGATCGATCGATCGATCGATCGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA
+CGATCGATCGATCGATCGATCGATCGTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA
 GCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGA
 TCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGA
 TCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGA`;
@@ -913,6 +931,8 @@ TCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGA`;
     generateMRNAFASTA() {
         const gene = this.sampleGenes[this.currentGene];
         const sequences = this.mockSequences[this.currentGene];
+        
+        if (!gene || !sequences || !sequences.mrna) return ">Error: mRNA data not available.";
         
         return sequences.mrna.map(seq => 
             `>${seq.accession} ${seq.description}
@@ -925,6 +945,8 @@ GCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGA`
     generateExonCSV() {
         const sequences = this.mockSequences[this.currentGene];
         
+        if (!sequences || !sequences.exons) return "Error: Exon data not available.";
+
         let csv = 'Exon Number,Ensembl ID,Start Position,End Position,Length (bp),Strand\n';
         csv += sequences.exons.map(exon => 
             `${exon.number},${exon.id},${exon.start},${exon.end},${exon.length},${exon.strand}`
@@ -936,6 +958,10 @@ GCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGA`
     generateSummaryReport() {
         const gene = this.sampleGenes[this.currentGene];
         const sequences = this.mockSequences[this.currentGene];
+
+        if (!gene || !sequences || !sequences.genomic || !sequences.mrna || !sequences.exons) {
+            return "Error: Could not generate summary report for this demo gene.";
+        }
         
         return `Gene Analysis Summary Report
 Generated: ${new Date().toLocaleString()}

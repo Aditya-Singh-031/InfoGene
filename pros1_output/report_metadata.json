@@ -1,0 +1,28 @@
+{
+  "gene_input": "PROS1",
+  "ncbi_gene_id": "5627",
+  "genomic_acc": null,
+  "transcript_acc": "NM_001314077",
+  "ensembl_transcript": "ENST00000650591",
+  "tss": 93973933,
+  "promoter_region": [
+    93973934,
+    93975933
+  ],
+  "3utr_genomic_exons": [
+    {
+      "gstart": 93876966,
+      "gend": 93877191,
+      "cdna_start": 1925,
+      "cdna_end": 2150,
+      "exon_id": "ENSE00002413512"
+    },
+    {
+      "gstart": 93873124,
+      "gend": 93874405,
+      "cdna_start": 2151,
+      "cdna_end": 3432,
+      "exon_id": "ENSE00003839182"
+    }
+  ]
+}

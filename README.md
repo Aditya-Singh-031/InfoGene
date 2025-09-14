@@ -58,7 +58,7 @@ InfoGene also offers a fully functional, professional web application for gene s
 
 
 
-https://aditya-singh-031.github.io/InfoGene/
+https://info-gene.vercel.app/
 
 
 \### Features of the Website

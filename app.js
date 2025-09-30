@@ -790,20 +790,27 @@ class GeneAnalysisPlatform {
             return;
         }
 
+        const primaryProtein = this.proteinData[0];
+        const uniprotId = primaryProtein.accession; 
+
+        // Strictly rely on the external AlphaFold API
         try {
-            const primaryProtein = this.proteinData[0];
-            const url = `${this.apis.alphafold}/prediction/${primaryProtein.accession}`;
+            const url = `${this.apis.alphafold}/prediction/${uniprotId}`;
 
             const response = await fetch(url);
-            if (response.ok) {
-                const data = await response.json();
-                this.alphaFoldData = data[0] || null;
-            } else {
-                this.alphaFoldData = null;
+            if (!response.ok) {
+                 // Throw an error if the API request itself fails (e.g., 404)
+                throw new Error(`AlphaFold API lookup failed with status ${response.status}`);
             }
+
+            const data = await response.json();
+            
+            // The AlphaFold API returns an array, take the first result
+            this.alphaFoldData = data[0] || null; 
+
         } catch (error) {
-            console.warn('AlphaFold lookup failed:', error.message);
-            this.alphaFoldData = null;
+            console.warn('AlphaFold lookup failed, no structure available:', error.message);
+            this.alphaFoldData = null; // Set to null if external lookup fails
         }
     }
 
@@ -998,7 +1005,7 @@ class GeneAnalysisPlatform {
         if (csvBtn) csvBtn.onclick = () => this.downloadCSV();
         if (txtBtn) txtBtn.onclick = () => this.downloadTXT();
     }    
-    
+
     downloadGenomicFASTA() {
         if (!this.sequenceData || !this.sequenceData.genomic) {
             this.showError("No genomic data available for download.");
@@ -1144,41 +1151,71 @@ class GeneAnalysisPlatform {
 
     async loadProteinStructure() {
         const structureViewer = document.getElementById('structure-viewer');
-        const structureInfo = document.getElementById('structure-info');
+        const structureUniprot = document.getElementById('structure-uniprot');
+        const structureProteinName = document.getElementById('structure-protein-name');
+        const structureNote = document.getElementById('structure-note');
+        const structureError = document.getElementById('structure-error');
+        const downloadStructureBtn = document.getElementById('download-structure-btn');
+        const viewOnAlphafoldBtn = document.getElementById('view-on-alphafold-btn');
 
-        if (!structureViewer || !structureInfo) return;
-
-        if (this.alphaFoldData?.pdbUrl) {
-            try {
-                if (!this.nglStage) {
-                    this.nglStage = new NGL.Stage(structureViewer);
-                    this.nglStage.setSize('100%', '400px');
-                }
-
-                this.nglStage.removeAllComponents();
-                const component = await this.nglStage.loadFile(this.alphaFoldData.pdbUrl);
-                component.addRepresentation('cartoon', { colorScheme: 'bfactor' });
-                this.nglStage.autoView();
-
-                structureInfo.innerHTML = `
-                    <div class="structure-item">
-                        <span class="structure-label">Protein</span>
-                        <span class="structure-value">${this.alphaFoldData.uniprotId}</span>
-                    </div>
-                    <div class="structure-item">
-                        <span class="structure-label">Model</span>
-                        <span class="structure-value">AlphaFold Prediction</span>
-                    </div>
-                    <div class="structure-item">
-                        <span class="structure-label">Gene</span>
-                        <span class="structure-value">${this.geneData.symbol}</span>
-                    </div>
-                `;
-            } catch (error) {
-                this.showDefaultStructureMessage();
-            }
-        } else {
+        // Clear previous error state
+        if (structureError) structureError.textContent = '';
+        const uniprotId = this.proteinData?.[0]?.accession;
+        
+        if (!structureViewer || !this.alphaFoldData?.pdbUrl || !uniprotId) {
             this.showDefaultStructureMessage();
+            if (downloadStructureBtn) downloadStructureBtn.disabled = true;
+            if (viewOnAlphafoldBtn) viewOnAlphafoldBtn.disabled = true;
+            return;
+        }
+
+        try {
+            // 1. Initialize NGL Stage if it doesn't exist
+            if (!this.nglStage) {
+                this.nglStage = new NGL.Stage(structureViewer);
+                this.nglStage.setParameters({ 
+                    backgroundColor: 'var(--color-surface)',
+                    clipDist: 10
+                });
+                window.addEventListener("resize", () => this.nglStage.handleResize(), false);
+            }
+            // Ensure the viewer container has the correct size
+            structureViewer.style.height = '420px';
+
+            this.nglStage.removeAllComponents();
+            
+            // 2. Load the PDB file from the AlphaFold URL (e.g., https://alphafold.ebi.ac.uk/files/...)
+            const component = await this.nglStage.loadFile(this.alphaFoldData.pdbUrl, { ext: "pdb" });
+            
+            // 3. Add representation and autoView
+            component.addRepresentation('cartoon', { 
+                colorScheme: 'bfactor', // Color by confidence score (pLDDT)
+                sele: 'protein' 
+            });
+            this.nglStage.autoView();
+
+            // 4. Update HTML metadata and buttons
+            const proteinDescription = this.proteinData[0].description || this.proteinData[0].name;
+            
+            if (structureUniprot) structureUniprot.textContent = uniprotId;
+            if (structureProteinName) structureProteinName.textContent = proteinDescription;
+            if (structureNote) structureNote.innerHTML = `Structure loaded from <strong>AlphaFold DB</strong>.`;
+            
+            if (downloadStructureBtn) {
+                downloadStructureBtn.disabled = false;
+                // Note: The actual download content is a placeholder as you don't have the file data
+                downloadStructureBtn.onclick = () => this.showError('Actual PDB content is not available for direct client-side download without a backend proxy.');
+            }
+
+            if (viewOnAlphafoldBtn) {
+                viewOnAlphafoldBtn.disabled = false;
+                viewOnAlphafoldBtn.onclick = () => window.open(`https://alphafold.ebi.ac.uk/entry/${uniprotId}`, '_blank');
+            }
+
+        } catch (error) {
+            console.error('NGL Viewer or PDB Fetch Error (CORS/404 likely):', error);
+            if (structureError) structureError.textContent = "Error: Failed to load 3D structure file. (CORS or 404)";
+            this.showDefaultStructureMessage(true); // Show placeholder on error
         }
     }
 

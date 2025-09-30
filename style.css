@@ -1049,35 +1049,34 @@ select.form-control {
   border-bottom: none;
 }
 
-/* File-download grid */
+/* >>> DOWNLOAD GRID – four-across desktop <<< */
 .download-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);   /* 4-up on large screens   */
-  gap: var(--space-16);
+  display: flex;                     /* flexbox instead of grid   */
+  flex-wrap: wrap;                   /* wrap on smaller screens   */
+  gap: var(--space-16);              /* keep your spacing token   */
 }
 
-/* 2-up on tablets */
-@media (max-width: 1000px) {
-  .download-grid { grid-template-columns: repeat(2, 1fr); }
+/* width of each card = 25 % minus the gap */
+.download-grid .download-item {
+  flex: 0 0 calc(25% - var(--space-16));
 }
 
-/* 1-up on mobile */
+/* 2-across on medium screens */
+@media (max-width: 1050px) {
+  .download-grid .download-item { flex: 0 0 calc(50% - var(--space-16)); }
+}
+
+/* 1-across on phones */
 @media (max-width: 600px) {
-  .download-grid { grid-template-columns: 1fr; }
+  .download-grid .download-item { flex: 0 0 100%; }
 }
 
-/* .download-item {
-  padding: var(--space-24);
-  border-radius: var(--radius-18);
-  background: var(--color-brown-600);
-} */
+css
 .download-item {
-  min-width: 0;                /* allow grid to shrink */
-  max-width: 100%; 
-  padding: var(--space-16);
-  background-color: var(--color-bg-6);
-  border-radius: var(--radius-base);
-  border: 1px solid var(--color-card-border);
+  min-width: 0;                 /* already present – keep        */
+  max-width: 100%;              /* already present – keep        */
+  padding: var(--space-16);     /* keep – reduced padding        */
+  /* nothing else in this rule needs to change */
 }
 
 .download-header {

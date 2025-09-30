@@ -988,15 +988,43 @@ class GeneAnalysisPlatform {
     }
 
     setupDownloads() {
-        const fastaBtn = document.getElementById('download-fasta');
-        const csvBtn = document.getElementById('download-csv');
-        const txtBtn = document.getElementById('download-txt');
-
-        if (fastaBtn) fastaBtn.onclick = () => this.downloadFASTA();
+        const fastaBtn = document.getElementById("download-fasta");
+        const mrnaBtn = document.getElementById("download-mrna");
+        const csvBtn = document.getElementById("download-csv");
+        const txtBtn = document.getElementById("download-txt");
+    
+        if (fastaBtn) fastaBtn.onclick = () => this.downloadGenomicFASTA();
+        if (mrnaBtn) mrnaBtn.onclick = () => this.downloadMRNAFASTA();
         if (csvBtn) csvBtn.onclick = () => this.downloadCSV();
         if (txtBtn) txtBtn.onclick = () => this.downloadTXT();
+    }    
+    
+    downloadGenomicFASTA() {
+        if (!this.sequenceData || !this.sequenceData.genomic) {
+            this.showError("No genomic data available for download.");
+            return;
+        }
+        let content = `>${this.geneData.symbol} | Genomic sequence | ${this.sequenceData.genomic.accession}\n`;
+        content += `(Length: ${this.sequenceData.genomic.length} bp)\n`;
+        // If you have API DNA sequence: content += "ACTG..." (add sequence here, line wrapped)
+        this.downloadFile(content, `${this.geneData.symbol}_genomic.fasta`, "text/plain");
     }
-
+    
+    downloadMRNAFASTA() {
+        if (!this.sequenceData || !this.sequenceData.mrna || this.sequenceData.mrna.length === 0) {
+            this.showError("No mRNA data available for download.");
+            return;
+        }
+        let content = "";
+        this.sequenceData.mrna.forEach(seq => {
+            content += `>${seq.accession} | ${seq.description}\n`;
+            content += `(Length: ${seq.length} bp)\n`;
+            // If you have the actual sequence: content += "AUGC..." (API result here)
+            content += "\n";
+        });
+        this.downloadFile(content, `${this.geneData.symbol}_mrna.fasta`, "text/plain");
+    }
+    
     downloadFASTA() {
         if (!this.geneData) return;
 

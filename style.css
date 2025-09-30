@@ -1051,32 +1051,26 @@ select.form-control {
 
 /* >>> DOWNLOAD GRID – four-across desktop <<< */
 .download-grid {
-  display: flex;                     /* flexbox instead of grid   */
-  flex-wrap: wrap;                   /* wrap on smaller screens   */
-  gap: var(--space-16);              /* keep your spacing token   */
+  display: flex;                     /* Force single row layout */
+  flex-wrap: wrap;                   /* Allow wrapping on small screens */
+  gap: 24px;                         /* Use 24px gap, matching the original HTML preference */
 }
 
-/* width of each card = 25 % minus the gap */
-.download-grid .download-item {
-  flex: 0 0 calc(25% - var(--space-16));
+/* Set width for four cards per row, achieving a smaller size */
+.download-card--custom {
+  flex: 0 0 calc(25% - 18px); /* 25% minus a safe amount for the 24px gap */
+  min-width: 200px; /* Prevent cards from getting too tiny on slightly smaller screens */
+  box-sizing: border-box;
 }
 
 /* 2-across on medium screens */
 @media (max-width: 1050px) {
-  .download-grid .download-item { flex: 0 0 calc(50% - var(--space-16)); }
+  .download-card--custom { flex: 0 0 calc(50% - 12px); }
 }
 
 /* 1-across on phones */
 @media (max-width: 600px) {
-  .download-grid .download-item { flex: 0 0 100%; }
-}
-
-css
-.download-item {
-  min-width: 0;                 /* already present – keep        */
-  max-width: 100%;              /* already present – keep        */
-  padding: var(--space-16);     /* keep – reduced padding        */
-  /* nothing else in this rule needs to change */
+  .download-card--custom { flex: 0 0 100%; }
 }
 
 .download-header {
@@ -1332,3 +1326,36 @@ css
 
 /* ensure viewer gets a clean contained look */
 #ngl-viewer { border-radius: 8px; background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); }
+
+/* Styles moved from inline to CSS (for the .download-card--custom class) */
+.download-card--custom {
+  background: #33221b;
+  padding: 24px;
+  border-radius: 18px;
+  min-height: 180px;
+}
+
+.download-card__title {
+  font-weight: bold;
+  font-size: 1.2em;
+  margin-bottom: 6px;
+  color: white;
+}
+
+.download-card__size, .download-card__description {
+  color: #b5b1b1;
+}
+
+.download-card__size {
+  margin-bottom: 4px;
+}
+
+.download-card__description {
+  margin-bottom: 14px;
+}
+
+.download-card__btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.08em;
+}

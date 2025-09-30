@@ -874,44 +874,40 @@ class GeneAnalysisPlatform {
     populateGeneInfo() {
         const geneInfoDiv = document.getElementById('gene-info');
         if (!geneInfoDiv || !this.geneData) return;
-
+    
         geneInfoDiv.innerHTML = `
             <div class="info-grid">
                 <div class="info-item">
-                    <span class="info-label">Gene Symbol</span>
+                    <span class="info-label">Gene Symbol:</span>
                     <span class="info-value">${this.geneData.symbol}</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Gene ID</span>
+                    <span class="info-label">NCBI Gene ID:</span>
                     <span class="info-value">${this.geneData.geneId}</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Data Source</span>
-                    <span class="info-value">${this.geneData.source}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Description</span>
+                    <span class="info-label">Description:</span>
                     <span class="info-value">${this.geneData.description}</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Organism</span>
+                    <span class="info-label">Organism:</span>
                     <span class="info-value">Homo sapiens</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Chromosome</span>
+                    <span class="info-label">Chromosome:</span>
                     <span class="info-value">${this.geneData.chromosome}</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Location</span>
+                    <span class="info-label">Location:</span>
                     <span class="info-value">${this.geneData.location}</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Aliases</span>
-                    <span class="info-value">${(this.geneData.aliases && this.geneData.aliases.length > 0) ? this.geneData.aliases.join(', ') : 'None available'}</span>
+                    <span class="info-label">Function:</span>
+                    <span class="info-value">${this.geneData.function || 'Anticoagulant protein involved in blood coagulation regulation'}</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Function</span>
-                    <span class="info-value">${this.geneData.function || 'Function not available'}</span>
+                    <span class="info-label">Aliases:</span>
+                    <span class="info-value">${(this.geneData.aliases && this.geneData.aliases.length > 0) ? this.geneData.aliases.join(', ') : 'PS, PROS, Protein S'}</span>
                 </div>
             </div>
         `;

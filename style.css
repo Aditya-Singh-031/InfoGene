@@ -1049,24 +1049,31 @@ select.form-control {
   border-bottom: none;
 }
 
+/* File-download grid */
 .download-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, 1fr);   /* 4-up on large screens   */
   gap: var(--space-16);
 }
+
+/* 2-up on tablets */
 @media (max-width: 1000px) {
-  .download-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .download-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* 1-up on mobile */
 @media (max-width: 600px) {
-  .download-grid {
-    grid-template-columns: 1fr;
-  }
+  .download-grid { grid-template-columns: 1fr; }
 }
 
-
+/* .download-item {
+  padding: var(--space-24);
+  border-radius: var(--radius-18);
+  background: var(--color-brown-600);
+} */
 .download-item {
+  min-width: 0;                /* allow grid to shrink */
+  max-width: 100%; 
   padding: var(--space-16);
   background-color: var(--color-bg-6);
   border-radius: var(--radius-base);

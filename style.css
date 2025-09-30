@@ -975,11 +975,59 @@ select.form-control {
   gap: var(--space-16);
 }
 
+/* --- Styles for individual sequence items --- */
 .sequence-item {
-  padding: var(--space-16);
-  background-color: var(--color-bg-3);
-  border-radius: var(--radius-base);
-  border: 1px solid var(--color-card-border);
+  background-color: var(--color-surface-secondary); /* Darker background for items */
+  border-radius: var(--border-radius); /* Rounded corners */
+  padding: var(--space-16); /* Padding inside each item */
+  margin-bottom: var(--space-8); /* Space between items */
+  display: flex; /* Use flexbox for alignment of accession, tag, and description */
+  align-items: center; /* Vertically align items */
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+  color: var(--color-text-light); /* Lighter text color */
+}
+
+/* Specific styling for the sequence accession link */
+.sequence-item__accession {
+  font-weight: bold;
+  color: var(--color-primary-light); /* A turquoise/light green color for the link */
+  margin-right: var(--space-8);
+  text-decoration: none; /* Remove underline from links */
+  white-space: nowrap; /* Keep accession on one line */
+}
+
+.sequence-item__accession:hover {
+  text-decoration: underline; /* Add underline on hover */
+}
+
+/* Styling for the RefSeqGene/mRNA tag */
+.sequence-item__tag {
+  background-color: var(--color-accent-green); /* Green background for the tag */
+  color: white; /* White text for the tag */
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm); /* Smaller rounded corners for the tag */
+  font-size: 0.8em;
+  font-weight: bold;
+  margin-right: var(--space-16); /* Space between tag and description */
+  white-space: nowrap; /* Keep tag on one line */
+}
+
+/* Styling for the description text */
+.sequence-item__description {
+  flex-grow: 1; /* Allows description to take up available space */
+  color: var(--color-text-secondary); /* Slightly lighter text for description */
+}
+
+/* Adjustments for smaller screens if needed */
+@media (max-width: 600px) {
+  .sequence-item {
+      flex-direction: column; /* Stack items vertically on small screens */
+      align-items: flex-start; /* Align text to the start */
+  }
+  .sequence-item__accession, .sequence-item__tag {
+      margin-bottom: var(--space-4); /* Add space below accession and tag */
+      margin-right: 0;
+  }
 }
 
 .sequence-header {

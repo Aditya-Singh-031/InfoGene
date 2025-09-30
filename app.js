@@ -923,48 +923,84 @@ class GeneAnalysisPlatform {
     }
 
     populateGenomicSequences() {
-        const genomicList = document.getElementById('genomic-sequences');
+        // FIX: Target the correct ID, which is 'genomic-list' inside the 'genomic-sequences' card
+        const genomicList = document.getElementById('genomic-list');
         if (!genomicList) return;
 
         genomicList.innerHTML = '';
 
         if (this.sequenceData && this.sequenceData.genomic) {
             const seq = this.sequenceData.genomic;
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <span class="sequence-accession">${seq.accession}</span>
-                <span class="sequence-type">${seq.type}</span>
-                <span class="sequence-length">${seq.length.toLocaleString()} bp</span>
-                <span class="sequence-description">${this.geneData.symbol} genomic sequence</span>
-            `;
-            genomicList.appendChild(li);
+            
+            // NEW: Use div and new classes for structured presentation
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'sequence-item';
+
+            const accessionLink = document.createElement('a');
+            accessionLink.href = `https://www.ncbi.nlm.nih.gov/nuccore/${seq.accession}`;
+            accessionLink.target = '_blank';
+            accessionLink.className = 'sequence-item__accession';
+            accessionLink.textContent = seq.accession;
+            itemDiv.appendChild(accessionLink);
+
+            const tagSpan = document.createElement('span');
+            tagSpan.className = 'sequence-item__tag';
+            tagSpan.textContent = seq.type || 'Genomic';
+            itemDiv.appendChild(tagSpan);
+
+            const descriptionSpan = document.createElement('span');
+            descriptionSpan.className = 'sequence-item__description';
+            descriptionSpan.textContent = `${seq.length.toLocaleString()} bp - ${this.geneData.symbol} genomic sequence`;
+            itemDiv.appendChild(descriptionSpan);
+
+            genomicList.appendChild(itemDiv);
         } else {
-            const li = document.createElement('li');
-            li.innerHTML = '<span class="sequence-description">Genomic sequence information not available</span>';
-            genomicList.appendChild(li);
+            // Fallback for no data
+            const p = document.createElement('p');
+            p.className = 'no-data';
+            p.textContent = 'Genomic sequence information not available';
+            genomicList.appendChild(p);
         }
     }
 
-    populateMRNASequences() {
-        const mrnaList = document.getElementById('mrna-sequences');
+   populateMRNASequences() {
+        // FIX: Target the correct ID, which is 'mrna-list' inside the 'mrna-sequences' card
+        const mrnaList = document.getElementById('mrna-list');
         if (!mrnaList) return;
 
         mrnaList.innerHTML = '';
 
         if (this.sequenceData && this.sequenceData.mrna && this.sequenceData.mrna.length > 0) {
             this.sequenceData.mrna.forEach(seq => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span class="sequence-accession">${seq.accession}</span>
-                    <span class="sequence-length">${seq.length.toLocaleString()} bp</span>
-                    <span class="sequence-description">${seq.description}</span>
-                `;
-                mrnaList.appendChild(li);
+                // NEW: Use div and new classes for structured presentation
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'sequence-item';
+
+                const accessionLink = document.createElement('a');
+                accessionLink.href = `https://www.ncbi.nlm.nih.gov/nuccore/${seq.accession}`;
+                accessionLink.target = '_blank';
+                accessionLink.className = 'sequence-item__accession';
+                accessionLink.textContent = seq.accession;
+                itemDiv.appendChild(accessionLink);
+
+                const tagSpan = document.createElement('span');
+                tagSpan.className = 'sequence-item__tag';
+                tagSpan.textContent = 'mRNA';
+                itemDiv.appendChild(tagSpan);
+
+                const descriptionSpan = document.createElement('span');
+                descriptionSpan.className = 'sequence-item__description';
+                descriptionSpan.textContent = `${seq.length.toLocaleString()} bp - ${seq.description}`;
+                itemDiv.appendChild(descriptionSpan);
+
+                mrnaList.appendChild(itemDiv);
             });
         } else {
-            const li = document.createElement('li');
-            li.innerHTML = '<span class="sequence-description">mRNA sequences not available</span>';
-            mrnaList.appendChild(li);
+            // Fallback for no data
+            const p = document.createElement('p');
+            p.className = 'no-data';
+            p.textContent = 'mRNA sequences not available';
+            mrnaList.appendChild(p);
         }
     }
 
